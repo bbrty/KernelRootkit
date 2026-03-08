@@ -1,0 +1,47 @@
+﻿  Building 'Driver' with toolset 'WindowsKernelModeDriver10.0' and the 'Universal' target platform.
+  Stamping x64\Debug\Driver.inf
+  Stamping [Version] section with DriverVer=01/22/2026,23.14.47.942
+  main.cpp
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vcruntime.h(61,26): warning C4083: expected ')'; found identifier '_VCRUNTIME_DISABLED_WARNINGS'
+  (compiling source file 'src/main.cpp')
+  
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vcruntime.h(111,9): warning C4005: '_CRT_STRINGIZE': macro redefinition
+  (compiling source file 'src/main.cpp')
+      C:\Users\bertie\source\repos\Testing\packages\Microsoft.Windows.WDK.x64.10.0.26100.6584\c\Include\10.0.26100.0\km\crt\crtdefs.h(85,9):
+      see previous definition of '_CRT_STRINGIZE'
+  
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vcruntime.h(114,9): warning C4005: '_CRT_WIDE': macro redefinition
+  (compiling source file 'src/main.cpp')
+      C:\Users\bertie\source\repos\Testing\packages\Microsoft.Windows.WDK.x64.10.0.26100.6584\c\Include\10.0.26100.0\km\crt\crtdefs.h(88,9):
+      see previous definition of '_CRT_WIDE'
+  
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vcruntime.h(155,9): warning C4005: '__CRTDECL': macro redefinition
+  (compiling source file 'src/main.cpp')
+      C:\Users\bertie\source\repos\Testing\packages\Microsoft.Windows.WDK.x64.10.0.26100.6584\c\Include\10.0.26100.0\km\crt\crtdefs.h(640,9):
+      see previous definition of '__CRTDECL'
+  
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\stdint.h(16,26): warning C4083: expected ')'; found identifier '_VCRUNTIME_DISABLED_WARNINGS'
+  (compiling source file 'src/main.cpp')
+  
+C:\Users\bertie\source\repos\Testing\Driver\src\Utils.h(80,58): warning C4996: 'ExAllocatePoolWithTag': ExAllocatePoolWithTag is deprecated, use ExAllocatePool2.
+  (compiling source file 'src/main.cpp')
+  
+  Driver.vcxproj -> C:\Users\bertie\source\repos\Testing\x64\Debug\Driver.sys
+  Done Adding Additional Store
+  Successfully signed: C:\Users\bertie\source\repos\Testing\x64\Debug\Driver.sys
+  
+  Driver is 'Universal'.
+  .........................
+  Signability test complete.
+  
+  Errors:
+  None
+  
+  Warnings:
+  None
+  
+  Catalog generation complete.
+  C:\Users\bertie\source\repos\Testing\x64\Debug\Driver\driver.cat
+  Done Adding Additional Store
+  Successfully signed: C:\Users\bertie\source\repos\Testing\x64\Debug\Driver\driver.cat
+  
