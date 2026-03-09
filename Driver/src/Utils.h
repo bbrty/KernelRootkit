@@ -3,11 +3,11 @@
 #include <ntimage.h>
 #include <cstdint>
 
-// --- Definitions ---
+// defs
 typedef unsigned __int64 uint64_t;
 #define PTE_BASE 0xFFFFF68000000000ULL 
-// NOTE: On Win10 2004+, PTE_BASE is randomized. 
-// You must calculate it dynamically using MiGetPteAddress or similar in production.
+// NOTE: PTE randomised now so add to todo
+// patch added with GetPteBase() to dynamically resolve PTE base on runtime
 
 typedef struct _RTL_PROCESS_MODULE_INFORMATION {
     PVOID Section;
@@ -27,7 +27,7 @@ typedef struct _RTL_PROCESS_MODULES {
     RTL_PROCESS_MODULE_INFORMATION Modules[1];
 } RTL_PROCESS_MODULES, * PRTL_PROCESS_MODULES;
 
-// --- Manual Definitions for Undocumented Kernel Exports ---
+// Manual Definitions for Undoc Kernel Exports
 extern "C" {
     NTKERNELAPI NTSTATUS ObReferenceObjectByName(
         PUNICODE_STRING ObjectName,
@@ -51,8 +51,7 @@ extern "C" NTSTATUS ZwQuerySystemInformation(
 
 extern "C" PIMAGE_NT_HEADERS NTAPI RtlImageNtHeader(PVOID Base);
 
-// --- HELPER: Pattern Scanner ---
-// Checks if data at 'p' matches the pattern/mask pair
+// Pattern Scanning
 BOOLEAN CheckMask(const char* p, const char* pattern, const char* mask) {
     for (; *mask; ++pattern, ++mask, ++p) {
         if (*mask == 'x' && *p != *pattern)
@@ -61,7 +60,6 @@ BOOLEAN CheckMask(const char* p, const char* pattern, const char* mask) {
     return TRUE;
 }
 
-// Scans a range of memory for the pattern
 uint64_t FindPattern(uint64_t base, uint32_t size, const char* pattern, const char* mask) {
     for (uint32_t i = 0; i < size; i++) {
         if (CheckMask((const char*)(base + i), pattern, mask)) {
@@ -71,7 +69,7 @@ uint64_t FindPattern(uint64_t base, uint32_t size, const char* pattern, const ch
     return 0;
 }
 
-// --- Helper: Get Module Base ---
+// Get Module Base equiv
 uint64_t GetKernelModule(const char* name, uint32_t* outSize) {
     ULONG bytes = 0;
     ZwQuerySystemInformation(11, NULL, 0, &bytes);
@@ -92,7 +90,7 @@ uint64_t GetKernelModule(const char* name, uint32_t* outSize) {
     return base;
 }
 
-// --- Helper: Get Section Address (for limiting scan to .text) ---
+// Get section base, for .text sec only scanning
 uint64_t GetSectionBase(uint64_t moduleBase, const char* sectionName, uint32_t* outSize) {
     PIMAGE_NT_HEADERS nt = RtlImageNtHeader((PVOID)moduleBase);
     PIMAGE_SECTION_HEADER sec = IMAGE_FIRST_SECTION(nt);
@@ -105,24 +103,18 @@ uint64_t GetSectionBase(uint64_t moduleBase, const char* sectionName, uint32_t* 
     return 0;
 }
 
-// --- Helper: Find .data Section ---
+// Helper: Find .data Section
 uint64_t FindDataSection(uint64_t moduleBase, uint32_t* outSize) {
     return GetSectionBase(moduleBase, ".data", outSize);
 }
 
-// --- Helper: Calculate PTE Address ---
-// --- Dynamic OS Detection & PTE Calculation ---
 uint64_t GetPteBase() {
-    // On Windows 10/11, we can resolve the randomized PTE_BASE 
-    // by finding the pattern for the 'MmGetVirtualForPte' function.
     static uint64_t CachedPteBase = 0;
     if (CachedPteBase) return CachedPteBase;
 
     uint32_t ntosSize = 0;
     uint64_t ntosBase = GetKernelModule("ntoskrnl.exe", &ntosSize);
 
-    // Pattern for 'mov rax, [dynamic_pte_base]' in MmPteToAddress
-    // This varies, but a common way is to resolve MmGetVirtualForPte 
     uint64_t addr = FindPattern(ntosBase, ntosSize, "\x48\x8B\x05\x00\x00\x00\x00\x48\xC1\xE8\x09\x48\xB8", "xxx????xxxxxx");
 
     if (addr) {
@@ -130,8 +122,6 @@ uint64_t GetPteBase() {
         CachedPteBase = *(uint64_t*)(addr + 7 + offset);
         return CachedPteBase;
     }
-
-    // Fallback for older systems (pre-randomization)
     return 0xFFFFF68000000000ULL;
 }
 
