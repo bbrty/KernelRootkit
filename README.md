@@ -36,12 +36,6 @@ This rootkit demonstrates bypasses for several Windows kernel security mechanism
 - **Covert communication** Usermode programs are able to communicate with the kernel driver via a hooked windows API. Traditionally, using pipes, IOCTL's or other communication methods user-kernel communication can get "sniffed" by other kernel mode drivers, eg. endpoint detection, other rootkits running, anti-cheats. The more modern approach uses shared memory, where both processes use polling to read and write from this memory block to communicate (even symmetric encryption can be used here to add prevent data sniffing). EDR solutions are picking up on this as they can enumerate encrypted shared memory and check entropy. This rootkit hooks a windows API, so when the usermode program calls it, it sends a "communication packet", basically a struct with everything we want to send" and the driver will intercept this and can return with its answer. Hooking these functions works thanks to driver stomping, when the API is scanned by an antivirus, it checks if the inline hook jumps outside the memory range of the driver. Since it doesnt, as all the code lives in data section and ROP is used to switch the NX bit, it passes this check. In future, ill consider switching to a different hook (IAT/EAT) for good measure. 
 
 
-## Architecture
-
-- **Driver Entry**: `DriverEntry` in `main.cpp` initializes the rootkit.
-- **Utilities**: `Utils.h` provides pattern scanning, module resolution, and section parsing.
-- **Payload**: `Payload.h` defines the ROP chain structure, context, and shellcode.
-
 ## Building
 
 No build or setup instructions will be published for this project, if you want to run this for research and need help setting it up, i recommend using kdmapper and a VM with WinDBG attached. 
